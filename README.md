@@ -4,7 +4,7 @@ Capture a sound card and offer it over WebRTC, one container.
 
 | | |
 |---|---|
-| **Recipe** | `Docker/docker-compose.yml` — no Dockerfile: it runs a binary from the shared plugin image built by `APK:plugins:Build` |
+| **Recipe** | `Docker/docker-compose.yml` — no Dockerfile: it runs a binary from the shared plugin image built by `APK:discovery` |
 | **Source** | `SRC/` (this repository — https://github.com/LikeDotAudio/APK.audio.Docker.PLUGIN.audio.SOUNDCARD_TO_WEBRTC.git) — bin `soundcard-to-webrtc`; built by the shared plugin image |
 | **Profile** | `sound` |
 | **Talks to** | the broker only |
