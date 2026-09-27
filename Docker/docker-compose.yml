@@ -1,7 +1,7 @@
-# APK:plugin:SOUNDCARD_IN — Capture a sound card and offer it over WebRTC, one container.
-#     COMPOSE_PROFILES=sound docker compose -f 'APK:PODS/POD:APK_THICK/APK:plugin:SOUNDCARD_IN/Docker/docker-compose.yml' up -d --build
+# PLUGIN:SOUNDCARD_IN — Capture a sound card and offer it over WebRTC, one container.
+#     COMPOSE_PROFILES=sound docker compose -f 'PODS/POD:THICK/plugin/PLUGIN:SOUNDCARD_IN/Docker/docker-compose.yml' up -d --build
 # Normally started with the other plugins, by node role (see discovery):
-#     COMPOSE_PROFILES=discovery,l2 docker compose -f 'APK:PODS/POD:APK_THICK/discovery/Docker/docker-compose.yml' up -d
+#     COMPOSE_PROFILES=discovery,l2 docker compose -f 'PODS/POD:THICK/discovery/Docker/docker-compose.yml' up -d
 # The image, the capability floor, the broker variables and the healthcheck are
 # the base service in discovery/Docker/plugin-base.yml; this file says
 # only what is THIS plugin's. No bind mounts, so no `bind:` sub-key to carry.
