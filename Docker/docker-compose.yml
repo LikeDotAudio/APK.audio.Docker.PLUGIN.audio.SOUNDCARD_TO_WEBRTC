@@ -1,9 +1,9 @@
-# PLUGIN:SOUNDCARD_IN — Capture a sound card and offer it over WebRTC, one container.
-#     COMPOSE_PROFILES=sound docker compose -f 'PODS/POD:THICK/plugin/PLUGIN:SOUNDCARD_IN/Docker/docker-compose.yml' up -d --build
+# PLUGIN.SOUNDCARD_IN — Capture a sound card and offer it over WebRTC, one container.
+#     COMPOSE_PROFILES=sound docker compose -f 'PODS/POD.THICK/PLUGINS/PLUGIN.SOUNDCARD_IN/Docker/docker-compose.yml' up -d --build
 # Normally started with the other plugins, by node role (see discovery):
-#     COMPOSE_PROFILES=discovery,l2 docker compose -f 'PODS/POD:THICK/discovery/Docker/docker-compose.yml' up -d
+#     COMPOSE_PROFILES=discovery,l2 docker compose -f 'PODS/POD.THICK/DISCOVERY.Engine/Docker/docker-compose.yml' up -d
 # The image, the capability floor, the broker variables and the healthcheck are
-# the base service in discovery/Docker/plugin-base.yml; this file says
+# the base service in DISCOVERY.Engine/Docker/plugin-base.yml; this file says
 # only what is THIS plugin's. No bind mounts, so no `bind:` sub-key to carry.
 
 # ONE PROJECT WITH THE REST (`apk-audio`), so the plugins clump with the node.
@@ -12,7 +12,7 @@ name: apk-audio
 services:
   soundcard-in:
     extends:
-      file: "../../../discovery/Docker/plugin-base.yml"
+      file: "../../../DISCOVERY.Engine/Docker/plugin-base.yml"
       service: plugin-host
     container_name: Plugin-SOUNDCARD_IN
     command: ["soundcard-to-webrtc", "--broker", "${APK_BAREMETAL_MQTT_HOST:-127.0.0.1}", "--broker-port", "${APK_BAREMETAL_MQTT_PORT:-1883}", "--room", "${APK_SOUNDCARD_ROOM:-default}"]

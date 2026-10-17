@@ -2,11 +2,11 @@
 name = "apkaudio-soundcard-to-webrtc"
 version = "0.1.0"
 edition.workspace = true
-workspace = "../../../discovery/SRC"
+workspace = "../../../DISCOVERY.Engine/SRC"
 description = "Captures a system sound card and sends it as Opus over WebRTC"
 
 [dependencies]
-apkaudio-contracts = { path = "../../../BareMetal/SRC/contracts/rust" }
+apkaudio-contracts = { path = "../../../NODE.BareMetal/SRC/contracts/rust" }
 cpal = "0.15"
 audiopus = "0.2"
 webrtc = "0.17"
