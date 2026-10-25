@@ -9,6 +9,7 @@
 //! WHAT THIS CRATE DOES NOT DO: it does not mix, it does not resample well
 //! enough to master through (see `format::conform`), and it does not own a
 //! broker. One card to one peer; run one process per card.
+pub mod card_state;
 pub mod capture;
 pub mod devices;
 pub mod encode;

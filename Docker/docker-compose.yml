@@ -19,6 +19,13 @@ services:
     profiles: [sound]
     # A sound card, and only this container's. The binary takes the broker on
     # argv rather than the environment, so compose interpolates it here.
+    # WHICH CARD. Empty is the ALSA default, which on the bench host is card 0,
+    # the NVidia HDMI codec: no capture, and no playback without a monitor. The
+    # plugin then idles, saying so at incoming/state + incoming/detail (with the
+    # devices that would open), rather than crash-looping. Name one here, e.g.
+    # APK_SOUNDCARD_DEVICE=default:CARD=Generic_1 (`--list-devices` lists them).
+    environment:
+      - APK_SOUNDCARD_DEVICE=${APK_SOUNDCARD_DEVICE:-}
     devices:
       - /dev/snd:/dev/snd
     group_add: [audio]
