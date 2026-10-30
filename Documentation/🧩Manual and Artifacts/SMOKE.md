@@ -4,7 +4,7 @@ Is `PLUGIN.SOUNDCARD_IN` deployed? Written by `.apk.scripts/smoke.py` from the m
 
 ← [Wiki home](../README.md)
 
-**✅ PASS** — 2/2 checks, since 2026-10-30 12:50 EDT
+**✅ PASS** — 2/2 checks, since 2026-10-30 12:51 EDT
 
 | Check | Target | Result | Detail |
 |---|---|---|---|
@@ -13,4 +13,4 @@ Is `PLUGIN.SOUNDCARD_IN` deployed? Written by `.apk.scripts/smoke.py` from the m
 
 Re-run: `python3 .apk.scripts/smoke.py PODS/POD.THICK/PLUGINS/PLUGIN.SOUNDCARD_IN`
 
-<!-- smoke:sig cb606633582f since 2026-10-30 12:50 EDT -->
+<!-- smoke:sig 20f2be5d1725 since 2026-10-30 12:51 EDT -->
