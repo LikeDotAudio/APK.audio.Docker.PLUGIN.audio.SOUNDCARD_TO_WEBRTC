@@ -19,6 +19,12 @@ services:
       file: "../../../DISCOVERY.Engine/Docker/plugin-base.yml"
       service: plugin-host
     container_name: Plugin-SOUNDCARD_IN
+    # WHAT THIS IS, said by the container itself (PLAN-3409.01): DockTor reads
+    # these with docker inspect, so its purpose and endpoint panes keep no list.
+    labels:
+      audio.apk.purpose: "Sound card capture offered over WebRTC"
+      audio.apk.purpose.what: "soundcard-to-webrtc on host networking with /dev/snd, capturing the ALSA default input and offering it as WebRTC in room APK_SOUNDCARD_ROOM, signalled over the broker. It exits if the default card has no capture device."
+      audio.apk.purpose.why: "It lets a browser tab listen to a physical input on this machine. Host networking because WebRTC ICE needs the host's real addresses."
     command: ["soundcard-to-webrtc", "--broker", "${APK_BAREMETAL_MQTT_HOST:-127.0.0.1}", "--broker-port", "${APK_BAREMETAL_MQTT_PORT:-1883}", "--room", "${APK_SOUNDCARD_ROOM:-default}"]
     profiles: [sound]
     # A sound card, and only this container's. The binary takes the broker on
