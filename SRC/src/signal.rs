@@ -116,6 +116,11 @@ pub async fn connect(broker: &str, port: u16, room: &str, role: Role) -> Result<
     let client_id = format!("apk-webrtc-{}-{}", role.leaf(), std::process::id());
     let mut options = MqttOptions::new(client_id, broker, port);
     options.set_keep_alive(Duration::from_secs(20));
+    // THE SAME CREDENTIALS AS CardState::connect: on a broker that requires
+    // auth an anonymous signalling session is refused and no call connects.
+    if let Some((username, password)) = apkaudio_contracts::broker_auth::credentials() {
+        options.set_credentials(username, password);
+    }
 
     let (client, eventloop) = AsyncClient::new(options, 32);
     let (listen_topic, send_topic) = topics_for(room, role)?;

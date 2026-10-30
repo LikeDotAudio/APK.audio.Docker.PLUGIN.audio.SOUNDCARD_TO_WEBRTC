@@ -22,7 +22,5 @@ rules live in the root: [Doctrine](../../../../../../Documentation/%F0%9F%8F%9BP
 
 * **The healthcheck.** The binary now writes the runner's health file, but the compose file still
   disables the healthcheck it was given while it did not.
-* **Broker credentials.** `CardState::connect` sets `APK_MQTT_USERNAME` / `APK_MQTT_PASSWORD`, but
-  `signal::connect` does not, so on a broker that requires auth the signalling session is refused.
 * **Declared config is read config.** [`SRC/config.ini`](../../SRC/config.ini) is published by the
   runner but no key in it is read; it describes the flags.
