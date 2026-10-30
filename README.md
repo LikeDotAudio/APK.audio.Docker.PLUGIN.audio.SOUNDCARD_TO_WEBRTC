@@ -42,7 +42,7 @@ section `[soundcard-to-webrtc]`.
 | Topic | Kept? | What |
 |---|---|---|
 | `APK.audio/Audio/WebRTC/{room}/offerer` | no | this side's offer and ICE candidates (`{"type": "offer"}` / `"ice"`) |
-| `APK.audio/Audio/WebRTC/{room}/answerer` | no | subscribed: the peer's answer and candidates |
+| `APK.audio/Audio/WebRTC/{room}/answerer` | no | subscribed: the peer's `hello`, answer and candidates |
 | `APK.audio/System/Protocols/soundcard_in/incoming/state` | retained | `listening` once capturing, `unavailable` while no card opens — also the last will |
 | `APK.audio/System/Protocols/soundcard_in/incoming/detail` | retained | why: the device opened, or the error and the devices that would open |
 
@@ -63,9 +63,10 @@ telemetry, self test or retained config.
 - A signalling or peer-connection error after capture starts returns from
   `main` with exit 1; the base service's `restart: unless-stopped` restarts the
   container.
-- The offer is published once, unretained. A receiver that subscribes after it
-  never sees it and the call does not connect until the sender restarts; a call
-  that ends is not re-offered.
+- The offer is unretained, so a receiver asks: it says `{"type": "hello"}` on
+  its `answerer` topic once subscribed, and this side says its offer again
+  (`session::run`). A `hello` while a call is up means a new receiver — the
+  call ends, the process exits and the container restarts with a fresh offer.
 
 ## Philosophy
 

@@ -11,6 +11,13 @@
 //! Nothing here is retained. A retained offer is a stale offer -- a peer that
 //! reconnects would answer a session that ended, and the ICE candidates in it
 //! point at ports nobody is listening on any more.
+//!
+//! SO THE ANSWERER ASKS. Unretained, an offer reaches only a receiver already
+//! subscribed when it is said; one that starts later, or restarts after a call
+//! ends, would never hear it. The answerer therefore says `hello` on its own
+//! topic as soon as it is subscribed, and the offerer answers a `hello` by
+//! saying its offer again -- or, if a call was already up, by ending the call
+//! (the peer it had is gone), so the container restarts with a fresh offer.
 use anyhow::{Result, anyhow};
 use apkaudio_contracts::topics;
 use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
@@ -21,6 +28,8 @@ use tokio::sync::mpsc;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Signal {
+    /// The answerer, freshly subscribed: "say your offer (again)".
+    Hello,
     Offer { sdp: String },
     Answer { sdp: String },
     Ice { candidate: String },
@@ -171,6 +180,14 @@ mod tests {
         assert!(check_room("wild+card", Role::Answerer).is_err());
         assert!(check_room("", Role::Offerer).is_err());
         assert!(check_room("default", Role::Offerer).is_ok());
+    }
+
+    /// `hello` is the whole wire form of the answerer's request, and both
+    /// crates must read it the same way (the two signal.rs are one protocol).
+    #[test]
+    fn hello_is_a_bare_type() {
+        assert_eq!(serde_json::to_string(&Signal::Hello).unwrap(), r#"{"type":"hello"}"#);
+        assert!(matches!(serde_json::from_str::<Signal>(r#"{"type":"hello"}"#).unwrap(), Signal::Hello));
     }
 
     /// The pairing itself: each half sends on its own role and listens on the

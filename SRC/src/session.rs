@@ -4,6 +4,7 @@
 //!
 //! THIS SIDE ALWAYS OFFERS. It is the one with media to send, so it knows when
 //! there is a session worth having; the receiver cannot offer without guessing.
+//! It offers once at start and again whenever a receiver says `hello`.
 //!
 //! ICE is trickled rather than gathered in full before the offer goes out.
 //! Waiting for gathering to complete adds the STUN timeout to every call setup
@@ -70,7 +71,7 @@ pub async fn run(
 
     let offer = pc.create_offer(None).await?;
     pc.set_local_description(offer.clone()).await?;
-    sig.send(&Signal::Offer { sdp: offer.sdp }).await.context("could not publish the offer")?;
+    sig.send(&Signal::Offer { sdp: offer.sdp.clone() }).await.context("could not publish the offer")?;
     tracing::info!("offer published, waiting for an answer");
 
     // Feeding the track is independent of signalling: a sample written before
@@ -85,11 +86,27 @@ pub async fn run(
         }
     });
 
+    let mut answered = false;
     while let Some(msg) = sig.inbox.recv().await {
         match msg {
+            // A receiver that subscribed after the offer went out (the offer is
+            // unretained -- see `signal`). Say the same offer again. If a call
+            // is already up, the answerer that sent this is a NEW one: the peer
+            // this connection was negotiated with has gone, and this connection
+            // cannot take a second answer, so the call ends -- the process
+            // exits and the container restarts with a fresh offer for it.
+            Signal::Hello if !answered => {
+                sig.send(&Signal::Offer { sdp: offer.sdp.clone() }).await.context("could not re-publish the offer")?;
+                tracing::info!("a receiver asked; offer published again");
+            }
+            Signal::Hello => {
+                tracing::info!("a new receiver asked while a call was up; ending this call so it can be offered afresh");
+                break;
+            }
             Signal::Answer { sdp } => {
                 let answer = RTCSessionDescription::answer(sdp)?;
                 pc.set_remote_description(answer).await?;
+                answered = true;
                 tracing::info!("answer applied, call is up");
             }
             Signal::Ice { candidate } => {
