@@ -76,7 +76,13 @@ pub async fn run(
 
     // Feeding the track is independent of signalling: a sample written before
     // the answer arrives is simply discarded by the track, which is correct.
-    let pump = tokio::spawn(async move {
+    //
+    // THE PUMP ENDING IS THE CALL ENDING. `packets` closes only when the
+    // encoder thread has stopped (an encoder error, or capture gone), and from
+    // then on there is no audio to send. Left running, the process would stay
+    // up saying `listening` with silence behind it; instead `run` returns an
+    // error, the process exits and the container restarts, card and all.
+    let mut pump = tokio::spawn(async move {
         let duration = Duration::from_millis(format::FRAME_MS as u64);
         while let Some(packet) = packets.recv().await {
             let sample = Sample { data: packet, duration, ..Default::default() };
@@ -87,7 +93,16 @@ pub async fn run(
     });
 
     let mut answered = false;
-    while let Some(msg) = sig.inbox.recv().await {
+    loop {
+        let msg = tokio::select! {
+            msg = sig.inbox.recv() => match msg {
+                Some(msg) => msg,
+                None => break,
+            },
+            _ = &mut pump => {
+                anyhow::bail!("the encoder stopped, so there is no audio to send -- ending the call");
+            }
+        };
         match msg {
             // A receiver that subscribed after the offer went out (the offer is
             // unretained -- see `signal`). Say the same offer again. If a call

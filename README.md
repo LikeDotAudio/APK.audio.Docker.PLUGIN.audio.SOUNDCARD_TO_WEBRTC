@@ -60,6 +60,9 @@ telemetry, self test or retained config.
 - A bad `--room` (more than one topic segment) is refused before any card is
   opened (`signal::check_room`).
 - A dropped ICE candidate costs a route, not the call (`publish_candidates`).
+- If the Opus encoder thread stops (`encode::run` errors, or capture ends),
+  the packet channel closes and `session::run` ends the call with an error,
+  so the container restarts rather than staying up `listening` with no audio.
 - A signalling or peer-connection error after capture starts returns from
   `main` with exit 1; the base service's `restart: unless-stopped` restarts the
   container.
