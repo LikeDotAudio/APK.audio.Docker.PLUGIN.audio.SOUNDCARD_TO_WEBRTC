@@ -5,6 +5,8 @@ peer: cpal capture → conform to 48 kHz stereo → Opus → one WebRTC audio tr
 with the SDP and ICE carried over MQTT. The receiving half is
 `PLUGIN.SOUNDCARD_OUT`.
 
+**Wiki:** [Documentation/README.md](Documentation/README.md) — principles, architecture and delivery, each checked against the code.
+
 | | |
 |---|---|
 | **Recipe** | `Docker/docker-compose.yml` — no Dockerfile: the service `soundcard-in` `extends` `plugin-host` in `PODS/POD.THICK/DISCOVERY.Engine/Docker/plugin-base.yml` and runs a binary from the shared plugin image `DISCOVERY.Engine/Docker/Dockerfile` builds (it links `libasound2` and `libopus`) |
