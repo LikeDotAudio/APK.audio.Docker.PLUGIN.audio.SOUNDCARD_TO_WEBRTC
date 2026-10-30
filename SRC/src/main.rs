@@ -18,12 +18,15 @@ struct Args {
     #[arg(long)]
     device: Option<String>,
 
-    /// Signalling broker.
-    #[arg(long, default_value = "127.0.0.1")]
-    broker: String,
+    /// Broker. Default: MQTT_HOST, else 127.0.0.1 — the runner's own rule.
+    /// Given here, it wins over MQTT_HOST for the runner's session too, so the
+    /// signalling and the plugin's own topics are always on one broker.
+    #[arg(long)]
+    broker: Option<String>,
 
-    #[arg(long, default_value_t = 1883)]
-    broker_port: u16,
+    /// Broker port. Default: MQTT_PORT, else 1883.
+    #[arg(long)]
+    broker_port: Option<u16>,
 
     /// Room name. The receiver must be given the same one.
     #[arg(long, default_value = "default")]
@@ -36,28 +39,80 @@ struct Args {
 /// The module token on the bus: `APK.audio/System/Protocols/soundcard_in/…`.
 const TOKEN: &str = "soundcard_in";
 
-#[tokio::main]
-async fn main() -> Result<()> {
+/// ON apk-plugin-runner (PLAN-3402.01). The runner owns the plugin's retained
+/// config, the last will, the self-test door and `incoming/api`; this binary
+/// owns the card and the call. The call runs as the runner's one agent, so a
+/// call that ends is an exit the container restarts — as it was before.
+fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
         .init();
     let args = Args::parse();
 
     if args.list_devices {
-        for d in devices::list()? {
-            println!("{}  ({} Hz, {} ch)", d.name, d.default_rate, d.default_channels);
+        match devices::list() {
+            Ok(list) => {
+                for d in list {
+                    println!("{}  ({} Hz, {} ch)", d.name, d.default_rate, d.default_channels);
+                }
+            }
+            Err(e) => {
+                eprintln!("🛑 {e:#}");
+                std::process::exit(1);
+            }
         }
-        return Ok(());
+        return;
     }
 
     // A room name is ONE topic segment. Refuse a bad one HERE, before a card is
     // opened: `--room "a/b"` builds a topic two segments deep, the peer
     // subscribing to `{room}/{role}` never sees it, and the call would simply
     // not connect with nothing logged anywhere.
-    signal::check_room(&args.room, session::ROLE)?;
+    if let Err(e) = signal::check_room(&args.room, session::ROLE) {
+        eprintln!("🛑 {e:#}");
+        std::process::exit(2);
+    }
 
+    // `--broker` / `--broker-port` STILL WORK: the runner reads MQTT_HOST and
+    // MQTT_PORT, so argv is written there before it does. SAFETY: no thread has
+    // been started yet — the runner and the tokio runtime both start below.
+    if let Some(host) = &args.broker {
+        unsafe { std::env::set_var("MQTT_HOST", host) };
+    }
+    if let Some(port) = args.broker_port {
+        unsafe { std::env::set_var("MQTT_PORT", port.to_string()) };
+    }
+
+    // This crate's own name and version into `incoming/api` (PLAN-3407.01).
+    apk_plugin_runner::stamp!();
+    apk_plugin_runner::serve(
+        apk_plugin_runner::Plugin {
+            token: TOKEN,
+            config_ini: include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini")),
+            self_test: apkaudio_soundcard_to_webrtc::self_test::self_test_json,
+        },
+        vec![(
+            "run_capture",
+            Box::new(move |host: String, port: u16| {
+                let runtime = match tokio::runtime::Runtime::new() {
+                    Ok(runtime) => runtime,
+                    Err(e) => {
+                        eprintln!("🛑 [{TOKEN}] no tokio runtime: {e}");
+                        return;
+                    }
+                };
+                if let Err(e) = runtime.block_on(call(args, host, port)) {
+                    eprintln!("🛑 [{TOKEN}] {e:#}");
+                }
+            }) as Box<dyn FnOnce(String, u16) + Send>,
+        )],
+    )
+}
+
+/// The card and the call, on the broker the runner resolved.
+async fn call(args: Args, broker: String, broker_port: u16) -> Result<()> {
     // NO CARD IS A STATE, NOT A CRASH — see `card_state`.
-    let status = card_state::CardState::connect(TOKEN, &args.broker, args.broker_port).await?;
+    let status = card_state::CardState::connect(TOKEN, &broker, broker_port).await?;
     let mut said = String::new();
     // `--device`, else APK_SOUNDCARD_DEVICE (the compose file's knob). Empty —
     // compose's default — is no choice at all: the host default.
@@ -100,7 +155,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let signalling = signal::connect(&args.broker, args.broker_port, &args.room, session::ROLE).await?;
+    let signalling = signal::connect(&broker, broker_port, &args.room, session::ROLE).await?;
     let (pc, track) = session::build(&args.stun).await?;
     session::run(pc, track, packet_rx, signalling).await
 }

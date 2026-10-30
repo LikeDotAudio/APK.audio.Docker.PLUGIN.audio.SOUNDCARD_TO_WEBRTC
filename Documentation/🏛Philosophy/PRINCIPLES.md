@@ -15,14 +15,14 @@ rules live in the root: [Doctrine](../../../../../../Documentation/%F0%9F%8F%9BP
 | **Say the state, do not crash-loop.** A card that will not open is `unavailable` + why + which devices would open, retried every 30 s. | [`SRC/src/card_state.rs`](../../SRC/src/card_state.rs) (`RETRY`, `:25`); the open loop in `main.rs`. |
 | **No silent success.** An encoder that stops closes the packet channel, and the call ends with an error rather than staying up `listening` with no audio. | the `tokio::select!` on the pump in `session::run`. |
 | **One statement of a topic.** Topics come from `apkaudio_contracts::topics`; a room that is not one segment is refused before a card is opened. | `topics_for`, `check_room` (`signal.rs:69`, `:86`); test `a_room_that_is_not_one_segment_is_refused`. |
+| **On the runner, like every plugin.** The runner owns config, last will, `incoming/api`, telemetry and the self-test door; this crate owns the card and the call. Its status session uses the client id `apk-plugin-soundcard_in-card-<pid>` so it never kicks the runner's `apk-plugin-soundcard_in-<pid>` off the broker. | [`SRC/src/main.rs`](../../SRC/src/main.rs) `apk_plugin_runner::serve`; [`SRC/src/self_test.rs`](../../SRC/src/self_test.rs); `CardState::connect`. |
 | **Opus off the async runtime.** Encoding runs on its own OS thread, never in cpal's callback or on a tokio worker. | [`SRC/src/encode.rs`](../../SRC/src/encode.rs) header; the thread spawn in [`SRC/src/main.rs`](../../SRC/src/main.rs). |
 
 ## Where the code bends a rule
 
-* **Every plugin is on `apk-plugin-runner`.** As committed, this binary is not: no `incoming/api`, no
-  self test on the bus, no retained config, and the compose healthcheck is disabled. PLAN-3402.01
-  (another session, in progress) moves it onto the runner.
+* **The healthcheck.** The binary now writes the runner's health file, but the compose file still
+  disables the healthcheck it was given while it did not.
 * **Broker credentials.** `CardState::connect` sets `APK_MQTT_USERNAME` / `APK_MQTT_PASSWORD`, but
   `signal::connect` does not, so on a broker that requires auth the signalling session is refused.
-* **Declared config is read config.** [`SRC/config.ini`](../../SRC/config.ini) is read by nothing; it
-  describes the flags.
+* **Declared config is read config.** [`SRC/config.ini`](../../SRC/config.ini) is published by the
+  runner but no key in it is read; it describes the flags.

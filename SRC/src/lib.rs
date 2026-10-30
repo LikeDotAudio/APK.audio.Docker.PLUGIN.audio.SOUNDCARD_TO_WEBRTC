@@ -15,4 +15,5 @@ pub mod devices;
 pub mod encode;
 pub mod format;
 pub mod session;
+pub mod self_test;
 pub mod signal;

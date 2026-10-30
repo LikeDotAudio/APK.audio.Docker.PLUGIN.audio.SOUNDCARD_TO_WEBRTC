@@ -31,13 +31,13 @@ cargo run -p apkaudio-soundcard-to-webrtc -- --help
 | Flag / variable | Default | What |
 |---|---|---|
 | `--device` / `APK_SOUNDCARD_DEVICE` | the host default | input device, exact name or unambiguous substring; the flag wins, empty means default |
-| `--broker`, `--broker-port` | `127.0.0.1`, `1883` | compose passes `APK_BAREMETAL_MQTT_HOST` / `_PORT` |
+| `--broker`, `--broker-port` | `MQTT_HOST` / `MQTT_PORT`, else `127.0.0.1`, `1883` | compose passes `APK_BAREMETAL_MQTT_HOST` / `_PORT`; given, they are written to `MQTT_HOST` / `MQTT_PORT` so the runner's session and the signalling share one broker |
 | `--room` / `APK_SOUNDCARD_ROOM` (compose) | `default` | one topic segment; the receiver must use the same room |
 | `--stun` | `stun:stun.l.google.com:19302` | ICE server |
 
-The binary takes everything on argv and the environment. **Nothing in this crate
-reads `SRC/config.ini`**; it is a description of the knobs, kept under the
-section `[soundcard-to-webrtc]`.
+The binary takes everything on argv and the environment. `SRC/config.ini` is
+compiled in and published retained by `apk-plugin-runner` at
+`…/soundcard_in/config`; nothing in the crate reads a key from it.
 
 ## On the bus
 
@@ -50,8 +50,12 @@ section `[soundcard-to-webrtc]`.
 
 Topics are built through `apkaudio_contracts::topics` / `baremetal_io`
 (`SRC/src/signal.rs`, `SRC/src/card_state.rs`), never formatted in the crate.
-It is not built on `apk-plugin-runner`, so it publishes no `incoming/api`,
-telemetry, self test or retained config.
+It is built on `apk-plugin-runner` (PLAN-3402.01): the runner publishes the
+retained config, `incoming/api` (with this crate's own `build.plugin_version`),
+telemetry and the health file, answers `selftest_run` through
+`SRC/src/self_test.rs`, and runs the card and the call as its one agent,
+`run_capture`. A call that ends returns the agent, and the runner exits so
+Docker restarts the container.
 
 ## When something goes wrong
 

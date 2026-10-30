@@ -21,7 +21,8 @@ Start `PLUGIN.SOUNDCARD_OUT` with the same `--room` (compose: `APK_SOUNDCARD_ROO
 
 | File | What |
 |---|---|
-| [`SRC/src/main.rs`](../../SRC/src/main.rs) | args, room check, card open loop, encoder thread, then signalling and the session |
+| [`SRC/src/main.rs`](../../SRC/src/main.rs) | args and room check, then `apk_plugin_runner::serve` with one agent, `run_capture`: the card open loop, encoder thread, signalling and the session on a tokio runtime |
+| [`SRC/src/self_test.rs`](../../SRC/src/self_test.rs) | the runner's self-test door: room refusal, frame shape, 48 kHz identity |
 | [`SRC/src/devices.rs`](../../SRC/src/devices.rs) | `list`, `resolve` (exact name, else unambiguous substring, else host default) |
 | [`SRC/src/capture.rs`](../../SRC/src/capture.rs) | cpal input stream; `drain` conforms each callback to 48 kHz stereo and cuts 20 ms frames |
 | [`SRC/src/format.rs`](../../SRC/src/format.rs) | `conform`: rate and channel conversion; the 48 kHz / 2 ch / 20 ms constants |
@@ -43,4 +44,5 @@ MQTT  APK.audio/Audio/WebRTC/{room}/offerer   ◀─ offer, ice        (this sid
 2. Once capturing, `listening` is retained, the encoder thread starts, signalling connects and the
    offer is said.
 3. A `hello` before the answer re-says the offer; a `hello` after it ends the call (the old peer is
-   gone). The call also ends when the encoder stops. Ending is a process exit; Docker restarts it.
+   gone). The call also ends when the encoder stops. Ending returns the runner's agent, the runner
+   exits, and Docker restarts it.

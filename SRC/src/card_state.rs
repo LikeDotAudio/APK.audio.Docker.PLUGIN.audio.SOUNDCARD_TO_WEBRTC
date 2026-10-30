@@ -35,7 +35,11 @@ impl CardState {
     pub async fn connect(token: &str, broker: &str, port: u16) -> Result<Self> {
         let (state_topic, _) = baremetal_io::module_incoming(token, "state")?;
         let (detail_topic, _) = baremetal_io::module_incoming(token, "detail")?;
-        let mut options = MqttOptions::new(format!("apk-plugin-{token}-{}", std::process::id()), broker, port);
+        // `-card` ON THE CLIENT ID. apk-plugin-runner's own session is
+        // `apk-plugin-{token}-{pid}` in this same process (PLAN-3402.01), and
+        // MQTT drops the older session on a duplicate id — the two would kick
+        // each other off for ever, reconnecting every few seconds.
+        let mut options = MqttOptions::new(format!("apk-plugin-{token}-card-{}", std::process::id()), broker, port);
         options.set_keep_alive(Duration::from_secs(20));
         if let Some((username, password)) = apkaudio_contracts::broker_auth::credentials() {
             options.set_credentials(username, password);
