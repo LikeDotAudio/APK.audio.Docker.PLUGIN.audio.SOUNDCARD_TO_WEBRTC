@@ -20,5 +20,7 @@ rules live in the root: [Doctrine](../../../../../../Documentation/%F0%9F%8F%9BP
 
 ## Where the code bends a rule
 
-* **Declared config is read config.** [`SRC/config.ini`](../../SRC/config.ini) is published by the
-  runner but no key in it is read; it describes the flags.
+* **Declared config is read config — no longer bent** (LOOSE-soundcard-config-unread). [`SRC/config.ini`](../../SRC/config.ini)
+  gives `room`, `stun` and `device` as defaults, read by [`SRC/src/settings.rs`](../../SRC/src/settings.rs);
+  argv and `APK_SOUNDCARD_DEVICE` override them, and the config the runner publishes retained is
+  the file rendered with the values the process runs with.

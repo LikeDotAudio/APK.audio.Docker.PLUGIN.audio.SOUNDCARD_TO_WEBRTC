@@ -3,7 +3,7 @@
 //! `soundcard-to-webrtc` -- capture one card and offer it to a peer.
 use anyhow::{Context, Result};
 use apkaudio_contracts::agent_state::AgentState;
-use apkaudio_soundcard_to_webrtc::{capture, card_state, devices, encode, session, signal};
+use apkaudio_soundcard_to_webrtc::{capture, card_state, devices, encode, session, settings, signal};
 use clap::Parser;
 use cpal::traits::DeviceTrait;
 
@@ -28,13 +28,19 @@ struct Args {
     #[arg(long)]
     broker_port: Option<u16>,
 
-    /// Room name. The receiver must be given the same one.
-    #[arg(long, default_value = "default")]
-    room: String,
+    /// Room name. The receiver must be given the same one. Default: `room` in config.ini.
+    #[arg(long)]
+    room: Option<String>,
 
-    #[arg(long, default_value = "stun:stun.l.google.com:19302")]
-    stun: String,
+    /// STUN server. Default: `stun` in config.ini.
+    #[arg(long)]
+    stun: Option<String>,
 }
+
+/// The crate's config.ini: the settings' defaults, and (rendered with the
+/// running values) the config the runner publishes. APK_PLUGIN_CONFIG names a
+/// file to use instead, the runner's own bench override.
+const CONFIG_INI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini"));
 
 /// The module token on the bus: `APK.audio/System/Protocols/soundcard_in/…`.
 const TOKEN: &str = "soundcard_in";
@@ -68,7 +74,23 @@ fn main() {
     // opened: `--room "a/b"` builds a topic two segments deep, the peer
     // subscribing to `{room}/{role}` never sees it, and the call would simply
     // not connect with nothing logged anywhere.
-    if let Err(e) = signal::check_room(&args.room, session::ROLE) {
+    let ini = match std::env::var("APK_PLUGIN_CONFIG").ok().filter(|p| !p.trim().is_empty()) {
+        Some(path) => std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            eprintln!("🛑 [{TOKEN}] APK_PLUGIN_CONFIG={path} did not read ({e}); using the compiled-in config.ini");
+            CONFIG_INI.to_owned()
+        }),
+        None => CONFIG_INI.to_owned(),
+    };
+    let device_env = std::env::var("APK_SOUNDCARD_DEVICE").ok();
+    let settings = settings::resolve(
+        &ini,
+        TOKEN,
+        args.room.as_deref(),
+        args.stun.as_deref(),
+        args.device.as_deref(),
+        device_env.as_deref(),
+    );
+    if let Err(e) = signal::check_room(&settings.room, session::ROLE) {
         eprintln!("🛑 {e:#}");
         std::process::exit(2);
     }
@@ -88,7 +110,9 @@ fn main() {
     apk_plugin_runner::serve(
         apk_plugin_runner::Plugin {
             token: TOKEN,
-            config_ini: include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini")),
+            // The RUNNING settings, not the shipped defaults. Leaked once: the
+            // runner keeps the text for the process's life.
+            config_ini: Box::leak(settings::render(&ini, TOKEN, &settings).into_boxed_str()),
             self_test: apkaudio_soundcard_to_webrtc::self_test::self_test_json,
         },
         vec![(
@@ -101,7 +125,7 @@ fn main() {
                         return;
                     }
                 };
-                if let Err(e) = runtime.block_on(call(args, host, port)) {
+                if let Err(e) = runtime.block_on(call(settings, host, port)) {
                     eprintln!("🛑 [{TOKEN}] {e:#}");
                 }
             }) as Box<dyn FnOnce(String, u16) + Send>,
@@ -110,14 +134,13 @@ fn main() {
 }
 
 /// The card and the call, on the broker the runner resolved.
-async fn call(args: Args, broker: String, broker_port: u16) -> Result<()> {
+async fn call(settings: settings::Settings, broker: String, broker_port: u16) -> Result<()> {
     // NO CARD IS A STATE, NOT A CRASH — see `card_state`.
     let status = card_state::CardState::connect(TOKEN, &broker, broker_port).await?;
     let mut said = String::new();
-    // `--device`, else APK_SOUNDCARD_DEVICE (the compose file's knob). Empty —
-    // compose's default — is no choice at all: the host default.
-    let from_env = std::env::var("APK_SOUNDCARD_DEVICE").ok();
-    let wanted = args.device.as_deref().or(from_env.as_deref()).filter(|d| !d.trim().is_empty());
+    // `--device`, else APK_SOUNDCARD_DEVICE (the compose file's knob), else
+    // `device` in config.ini. Empty — compose's default — is no choice at all.
+    let wanted = settings.device.as_deref();
     let (name, capture) = loop {
         let opened = devices::resolve(wanted).and_then(|device| {
             let name = device.name().unwrap_or_else(|_| "<unnameable>".to_owned());
@@ -155,7 +178,7 @@ async fn call(args: Args, broker: String, broker_port: u16) -> Result<()> {
         }
     });
 
-    let signalling = signal::connect(&broker, broker_port, &args.room, session::ROLE).await?;
-    let (pc, track) = session::build(&args.stun).await?;
+    let signalling = signal::connect(&broker, broker_port, &settings.room, session::ROLE).await?;
+    let (pc, track) = session::build(&settings.stun).await?;
     session::run(pc, track, packet_rx, signalling).await
 }

@@ -30,14 +30,16 @@ cargo run -p apkaudio-soundcard-to-webrtc -- --help
 
 | Flag / variable | Default | What |
 |---|---|---|
-| `--device` / `APK_SOUNDCARD_DEVICE` | the host default | input device, exact name or unambiguous substring; the flag wins, empty means default |
+| `--device` / `APK_SOUNDCARD_DEVICE` | `device` in config.ini, empty = the host default | input device, exact name or unambiguous substring; the flag wins, empty means default |
 | `--broker`, `--broker-port` | `MQTT_HOST` / `MQTT_PORT`, else `127.0.0.1`, `1883` | compose passes `APK_BAREMETAL_MQTT_HOST` / `_PORT`; given, they are written to `MQTT_HOST` / `MQTT_PORT` so the runner's session and the signalling share one broker |
-| `--room` / `APK_SOUNDCARD_ROOM` (compose) | `default` | one topic segment; the receiver must use the same room |
-| `--stun` | `stun:stun.l.google.com:19302` | ICE server |
+| `--room` / `APK_SOUNDCARD_ROOM` (compose) | `room` in config.ini (`default`) | one topic segment; the receiver must use the same room |
+| `--stun` | `stun` in config.ini (`stun:stun.l.google.com:19302`) | ICE server |
 
-The binary takes everything on argv and the environment. `SRC/config.ini` is
-compiled in and published retained by `apk-plugin-runner` at
-`…/soundcard_in/config`; nothing in the crate reads a key from it.
+`SRC/config.ini` (compiled in; `APK_PLUGIN_CONFIG` names a file instead) holds
+the defaults for `room`, `stun` and `device`; the flags and `APK_SOUNDCARD_DEVICE`
+override them ([`SRC/src/settings.rs`](SRC/src/settings.rs)). The config
+`apk-plugin-runner` publishes retained at `…/soundcard_in/config` is that file with
+the values the process actually runs with written in.
 
 ## On the bus
 
