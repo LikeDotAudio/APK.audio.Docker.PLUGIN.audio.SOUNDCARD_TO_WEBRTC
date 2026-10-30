@@ -5,8 +5,8 @@ edition = "2024"
 description = "Captures a system sound card and sends it as Opus over WebRTC"
 
 [dependencies]
-apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.3" }
-apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.3" }
+apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.4" }
+apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.4" }
 cpal = "0.15"
 audiopus = "0.2"
 webrtc = "0.17"
