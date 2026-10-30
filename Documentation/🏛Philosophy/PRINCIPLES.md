@@ -20,7 +20,5 @@ rules live in the root: [Doctrine](../../../../../../Documentation/%F0%9F%8F%9BP
 
 ## Where the code bends a rule
 
-* **The healthcheck.** The binary now writes the runner's health file, but the compose file still
-  disables the healthcheck it was given while it did not.
 * **Declared config is read config.** [`SRC/config.ini`](../../SRC/config.ini) is published by the
   runner but no key in it is read; it describes the flags.

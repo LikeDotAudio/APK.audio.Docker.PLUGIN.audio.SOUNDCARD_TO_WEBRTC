@@ -27,8 +27,7 @@ every other submodule by `.apk.scripts/deploy_all.py` at the APK.audio root.
 
 ## Not automated
 
-* No CI builds or tests it; no test exercises a real card or a real call.
+* CI ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) runs the SDK's reusable plugin
+  workflow; no test exercises a real card or a real call.
 * No release artefact or version: the image is built locally on each node (`up -d --build`).
-* The compose healthcheck is disabled (the binary is not on the runner as committed), so Docker
-  reports no health for it.
 * The STUN server defaults to a public Google one (`--stun`); nothing provisions a local one.

@@ -10,7 +10,7 @@ with the SDP and ICE carried over MQTT. The receiving half is
 | | |
 |---|---|
 | **Recipe** | `Docker/docker-compose.yml` — no Dockerfile: the service `soundcard-in` `extends` `plugin-host` in `PODS/POD.THICK/DISCOVERY.Engine/Docker/plugin-base.yml` and runs a binary from the shared plugin image `DISCOVERY.Engine/Docker/Dockerfile` builds (it links `libasound2` and `libopus`) |
-| **Container** | `Plugin-SOUNDCARD_IN`, compose project `apk-audio`, profile `sound`, host networking (ICE), `/dev/snd` + group `audio`, healthcheck disabled |
+| **Container** | `Plugin-SOUNDCARD_IN`, compose project `apk-audio`, profile `sound`, host networking (ICE), `/dev/snd` + group `audio`, the base `apk-plugin-health` healthcheck |
 | **Source** | `SRC/` (this repository — https://github.com/LikeDotAudio/APK.audio.Docker.PLUGIN.audio.SOUNDCARD_TO_WEBRTC.git) — crate `apkaudio-soundcard-to-webrtc`, bin `soundcard-to-webrtc` (`SRC/src/main.rs`), a member of the `DISCOVERY.Engine/SRC` cargo workspace |
 | **Talks to** | the broker (signalling and state), the STUN server (`--stun`, default `stun:stun.l.google.com:19302`), and the answering peer over WebRTC |
 

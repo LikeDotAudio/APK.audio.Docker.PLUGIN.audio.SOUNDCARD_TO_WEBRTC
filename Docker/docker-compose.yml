@@ -39,10 +39,9 @@ services:
     devices:
       - /dev/snd:/dev/snd
     group_add: [audio]
-    # Not built on apk-plugin-runner, so there is no health file to read; the
-    # base check would report it unhealthy for ever.
-    healthcheck:
-      disable: true
+    # THE BASE HEALTHCHECK STANDS (LOOSE-soundcard-healthcheck): the binary is
+    # on apk-plugin-runner (PLAN-3402.01), whose telemetry tick writes the file
+    # `apk-plugin-health` reads — also while the card is idle and retrying.
 
 volumes:
   # LOGGER STORAGE — owned by DATABASE.volume.Log-STORAGE, which binds it onto
