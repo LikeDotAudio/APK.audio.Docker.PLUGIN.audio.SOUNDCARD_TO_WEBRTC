@@ -10,13 +10,29 @@
 
 use apkaudio_contracts::self_test::{Check, Depth, Report};
 
-use crate::{format, session, signal};
+use crate::{CONFIG_INI, format, session, signal};
 
 /// The topic segment this crate owns on the bus.
 pub const MODULE: &str = "soundcard_in";
 
 pub fn self_test(depth: Depth) -> Report {
     let mut report = Report::new(MODULE, depth);
+
+    // The two house checks every crate answers (PLUGINS/_template): this crate
+    // can address its own self-test mailbox, and it addresses it under the
+    // name config.ini publishes it by.
+    report.record(Check::from_result(
+        "landing_spots_build",
+        Depth::Own,
+        "both inputs and all three readbacks address a legal topic",
+        landing_spots(),
+    ));
+    report.record(Check::from_result(
+        "config_section_still_names_this_module",
+        Depth::Own,
+        "config.ini declares this module under the name the bus knows it by",
+        config_declares_module(),
+    ));
 
     report.record(Check::from_result(
         "the_default_room_is_one_topic_segment",
@@ -65,6 +81,31 @@ pub fn self_test(depth: Depth) -> Report {
     report
 }
 
+/// The four self-test topics, built. An error here is a module name that
+/// stopped being a legal topic segment, which would silently detach this crate
+/// from its own mailbox rather than fail anywhere visible.
+fn landing_spots() -> Result<(), String> {
+    use apkaudio_contracts::self_test as st;
+    st::engage_topic(MODULE).map_err(|e| format!("{e:?}"))?;
+    st::run_topic(MODULE).map_err(|e| format!("{e:?}"))?;
+    apkaudio_contracts::baremetal_io::module_incoming(MODULE, st::LEAF_RESULT).map_err(|e| format!("{e:?}"))?;
+    apkaudio_contracts::baremetal_io::module_incoming(MODULE, st::LEAF_REPORT).map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+/// Does `config.ini` declare `[MODULE]`? apk-plugin-runner publishes the
+/// compiled-in file retained under the section's own name, so a section renamed
+/// without its crate puts this agent's config on the bus under a name nothing
+/// reads.
+fn config_declares_module() -> Result<(), String> {
+    let wanted = format!("[{MODULE}]");
+    if CONFIG_INI.lines().any(|line| line.trim() == wanted) {
+        Ok(())
+    } else {
+        Err(format!("config.ini does not declare {wanted}"))
+    }
+}
+
 pub fn self_test_json(depth_word: &str) -> String {
     apkaudio_contracts::self_test::run_as_json(MODULE, depth_word, self_test)
 }
@@ -83,6 +124,8 @@ mod tests {
     #[test]
     fn the_module_name_is_a_legal_topic_segment() {
         assert!(apkaudio_contracts::topics::is_segment(MODULE));
+        assert_eq!(landing_spots(), Ok(()));
+        assert_eq!(config_declares_module(), Ok(()));
     }
 
     #[test]

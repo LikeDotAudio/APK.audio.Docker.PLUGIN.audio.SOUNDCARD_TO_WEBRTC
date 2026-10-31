@@ -19,7 +19,7 @@
 //! saying its offer again -- or, if a call was already up, by ending the call
 //! (the peer it had is gone), so the container restarts with a fresh offer.
 use anyhow::{Result, anyhow};
-use apkaudio_contracts::topics;
+use apkaudio_contracts::{broker_backoff, topics};
 use rumqttc::{AsyncClient, EventLoop, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -143,24 +143,76 @@ impl Signalling {
 /// A malformed payload is logged and skipped rather than fatal: this topic is
 /// public on the bench bus and one bad publish must not end a live call.
 async fn pump(mut eventloop: EventLoop, tx: mpsc::UnboundedSender<Signal>) {
+    let mut pacing = Pacing::new("signalling");
     loop {
         match eventloop.poll().await {
-            Ok(rumqttc::Event::Incoming(rumqttc::Packet::Publish(p))) => {
-                match serde_json::from_slice::<Signal>(&p.payload) {
-                    Ok(sig) => {
-                        if tx.send(sig).is_err() {
-                            return;
+            Ok(event) => {
+                pacing.on_success();
+                if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(p)) = event {
+                    match serde_json::from_slice::<Signal>(&p.payload) {
+                        Ok(sig) => {
+                            if tx.send(sig).is_err() {
+                                return;
+                            }
                         }
+                        Err(e) => tracing::warn!(error = %e, "signalling payload ignored"),
                     }
-                    Err(e) => tracing::warn!(error = %e, "signalling payload ignored"),
                 }
             }
-            Ok(_) => {}
-            Err(e) => {
-                tracing::warn!(error = %e, "signalling loop reconnecting");
-                tokio::time::sleep(Duration::from_secs(2)).await;
+            Err(e) => pacing.on_failure(&e).await,
+        }
+    }
+}
+
+/// The reconnect pacing for ONE of this process's extra MQTT sessions (the
+/// card-state session and the signalling session; the runner's own session
+/// paces itself).
+///
+/// It was a flat `sleep(2 s)` on every error, which treated a broker that
+/// REFUSED these credentials the same as one that is merely down: a refusal is
+/// a configuration fault that retrying cannot fix, so it now backs off to a
+/// minute and says so on the contract's schedule, while a broker that is away
+/// is retried on the short transient curve. The policy is
+/// `apkaudio_contracts::broker_backoff`; this only classifies rumqttc's error
+/// and hands it tokio's timer via `wait_out`, never `step`/`drain`, whose
+/// `std::thread::sleep` would hold a tokio worker. One `Pacing` per session,
+/// owned by the loop that polls it.
+///
+/// Twin: the other SOUNDCARD crate's signal.rs is this file — keep them identical.
+pub struct Pacing {
+    session: &'static str,
+    backoff: broker_backoff::Backoff,
+    last_reason: Option<String>,
+}
+
+impl Pacing {
+    pub fn new(session: &'static str) -> Self {
+        Self { session, backoff: broker_backoff::Backoff::new(), last_reason: None }
+    }
+
+    /// A packet moved: every curve resets.
+    pub fn on_success(&mut self) {
+        self.backoff.on_success();
+        self.last_reason = None;
+    }
+
+    /// The session failed: say so when it is news, then wait the paced time.
+    pub async fn on_failure(&mut self, error: &rumqttc::ConnectionError) {
+        let refused = matches!(error, rumqttc::ConnectionError::ConnectionRefused(_));
+        let retry = self.backoff.on_failure(refused);
+        let reason = error.to_string();
+        if retry.is_news(&reason, &mut self.last_reason) {
+            match &retry.message {
+                Some(message) => tracing::warn!(session = self.session, "{message}"),
+                None => tracing::warn!(
+                    session = self.session,
+                    "{reason} -- reconnecting in {:?}{}",
+                    retry.wait,
+                    retry.suppressed_note()
+                ),
             }
         }
+        broker_backoff::wait_out(&retry, tokio::time::sleep).await;
     }
 }
 
@@ -171,6 +223,24 @@ mod tests {
     /// Two lists of role names with nothing comparing them is how they drift.
     /// `webrtc_signal` refuses any role outside the contract's closed pair, so
     /// a rename there would strand this crate at startup; this fails first.
+    /// A refused CONNACK is a configuration fault and backs off on the
+    /// contract's refusal curve; a broker that is away is transient. Both go
+    /// through `broker_backoff`, never a fixed sleep.
+    #[tokio::test(start_paused = true)]
+    async fn pacing_waits_the_contract_curve() {
+        let mut pacing = Pacing::new("test");
+        let refused = rumqttc::ConnectionError::ConnectionRefused(rumqttc::ConnectReturnCode::NotAuthorized);
+        let started = tokio::time::Instant::now();
+        pacing.on_failure(&refused).await;
+        assert_eq!(started.elapsed(), broker_backoff::REFUSAL_FIRST);
+
+        pacing.on_success();
+        let away = rumqttc::ConnectionError::NetworkTimeout;
+        let started = tokio::time::Instant::now();
+        pacing.on_failure(&away).await;
+        assert_eq!(started.elapsed(), broker_backoff::TRANSIENT_FIRST);
+    }
+
     #[test]
     fn role_leaves_are_the_contract_pair() {
         assert_eq!([Role::Offerer.leaf(), Role::Answerer.leaf()], topics::WEBRTC_SIGNAL_ROLES);

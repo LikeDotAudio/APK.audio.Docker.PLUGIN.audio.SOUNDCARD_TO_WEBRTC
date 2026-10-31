@@ -47,7 +47,7 @@ the values the process actually runs with written in.
 |---|---|---|
 | `APK.audio/Audio/WebRTC/{room}/offerer` | no | this side's offer and ICE candidates (`{"type": "offer"}` / `"ice"`) |
 | `APK.audio/Audio/WebRTC/{room}/answerer` | no | subscribed: the peer's `hello`, answer and candidates |
-| `APK.audio/System/Protocols/soundcard_in/incoming/state` | retained | `listening` once capturing, `unavailable` while no card opens — also the last will |
+| `APK.audio/System/Protocols/soundcard_in/incoming/state` | retained | `listening` once capturing, `unavailable` while no card opens — the runner's last will says `unavailable` on the same leaf |
 | `APK.audio/System/Protocols/soundcard_in/incoming/detail` | retained | why: the device opened, or the error and the devices that would open |
 
 Topics are built through `apkaudio_contracts::topics` / `baremetal_io`
@@ -64,7 +64,7 @@ Docker restarts the container.
 - **No card that opens is a state, not a crash** (`SRC/src/card_state.rs`).
   The plugin says `unavailable` + why + which devices would open, and retries
   every 30 s (`RETRY`), so a card plugged in later is picked up.
-- The status session's broker is retried every 2 s, never fatal.
+- The status and signalling sessions reconnect on the contract's `broker_backoff` curves (a refusal backs off to a minute and says why), never fatal; the session loop ticks the runner's stall clock every 10 s.
 - A bad `--room` (more than one topic segment) is refused before any card is
   opened (`signal::check_room`).
 - A dropped ICE candidate costs a route, not the call (`publish_candidates`).

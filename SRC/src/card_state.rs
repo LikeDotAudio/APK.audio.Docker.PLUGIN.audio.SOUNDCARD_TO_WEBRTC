@@ -9,8 +9,9 @@
 //! nothing without a monitor. A crash loop said none of that — the container
 //! read "Restarting (1)" and the bus said nothing. Now a card that will not
 //! open is a STATE: `incoming/state` = `unavailable` (the contract's word for
-//! "running and can see nothing", and this client's last will, so a process
-//! that dies says it too), `incoming/detail` says why and which devices WOULD
+//! "running and can see nothing"; a process that dies says it too, through
+//! apk-plugin-runner's last will on the same leaf, which this session does NOT
+//! duplicate), `incoming/detail` says why and which devices WOULD
 //! open, and the plugin retries every RETRY so a card plugged in later, or an
 //! APK_SOUNDCARD_DEVICE set and the container restarted, is picked up.
 //!
@@ -18,7 +19,7 @@
 use anyhow::Result;
 use apkaudio_contracts::agent_state::AgentState;
 use apkaudio_contracts::baremetal_io;
-use rumqttc::{AsyncClient, LastWill, MqttOptions, QoS};
+use rumqttc::{AsyncClient, MqttOptions, QoS};
 use std::time::Duration;
 
 /// How long an idle plugin waits before trying the card again.
@@ -44,14 +45,20 @@ impl CardState {
         if let Some((username, password)) = apkaudio_contracts::broker_auth::credentials() {
             options.set_credentials(username, password);
         }
-        options.set_last_will(LastWill::new(&state_topic, AgentState::Unavailable.as_str(), QoS::AtLeastOnce, true));
+        // NO LAST WILL HERE. apk-plugin-runner's own session already wills
+        // `unavailable` on this exact leaf (RP-01: the runner owns the will);
+        // a second will on a second session was two owners of one fact.
         let (client, mut eventloop) = AsyncClient::new(options, 16);
         // The event loop must be polled for anything to leave; a broker that is
-        // away is retried, never fatal — the card is this process's job, not the bus.
+        // away is retried, never fatal — the card is this process's job, not the
+        // bus. Paced by the contract's broker_backoff (signal::Pacing), not a
+        // flat sleep, so a refusal backs off and says why.
         tokio::spawn(async move {
+            let mut pacing = crate::signal::Pacing::new("card-state");
             loop {
-                if eventloop.poll().await.is_err() {
-                    tokio::time::sleep(Duration::from_secs(2)).await;
+                match eventloop.poll().await {
+                    Ok(_) => pacing.on_success(),
+                    Err(e) => pacing.on_failure(&e).await,
                 }
             }
         });

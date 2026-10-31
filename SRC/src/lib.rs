@@ -18,3 +18,9 @@ pub mod session;
 pub mod settings;
 pub mod self_test;
 pub mod signal;
+
+/// This crate's `config.ini`, baked in at compile time: the settings' defaults,
+/// the config the runner publishes (rendered with the running values) and what
+/// the self test checks the section name against. One statement, read by
+/// `main` and `self_test` alike.
+pub const CONFIG_INI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini"));

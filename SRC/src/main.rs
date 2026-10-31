@@ -37,10 +37,10 @@ struct Args {
     stun: Option<String>,
 }
 
-/// The crate's config.ini: the settings' defaults, and (rendered with the
-/// running values) the config the runner publishes. APK_PLUGIN_CONFIG names a
-/// file to use instead, the runner's own bench override.
-const CONFIG_INI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini"));
+/// The crate's config.ini (`lib.rs`): the settings' defaults, and (rendered
+/// with the running values) the config the runner publishes. APK_PLUGIN_CONFIG
+/// names a file to use instead, the runner's own bench override.
+use apkaudio_soundcard_to_webrtc::CONFIG_INI;
 
 /// The module token on the bus: `APK.audio/System/Protocols/soundcard_in/…`.
 const TOKEN: &str = "soundcard_in";
@@ -141,11 +141,15 @@ async fn call(settings: settings::Settings, broker: String, broker_port: u16) ->
     // `--device`, else APK_SOUNDCARD_DEVICE (the compose file's knob), else
     // `device` in config.ini. Empty — compose's default — is no choice at all.
     let wanted = settings.device.as_deref();
+    // STALL DETECTION (RP-09): this loop and `session::run` tick the runner's
+    // clock for this agent. Each pass here is at most RETRY (30 s), well inside
+    // APK_PLUGIN_STALL_SECS, so a card that never opens is waiting, not wedged.
     let (name, capture) = loop {
         let opened = devices::resolve(wanted).and_then(|device| {
             let name = device.name().unwrap_or_else(|_| "<unnameable>".to_owned());
             capture::start(&device).context("could not start capture").map(|c| (name, c))
         });
+        apk_plugin_runner::tick();
         match opened {
             Ok(pair) => break pair,
             Err(e) => {

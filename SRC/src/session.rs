@@ -93,8 +93,15 @@ pub async fn run(
     });
 
     let mut answered = false;
+    // A call that is up says nothing on signalling for as long as it lasts, so
+    // the loop also turns on a timer: every turn ticks the runner's stall clock
+    // (RP-09), and a turn that never comes — this task wedged on an await — is
+    // what the runner's watchdog exits 75 for.
+    let mut alive = tokio::time::interval(TICK_EVERY);
     loop {
+        apk_plugin_runner::tick();
         let msg = tokio::select! {
+            _ = alive.tick() => continue,
             msg = sig.inbox.recv() => match msg {
                 Some(msg) => msg,
                 None => break,
@@ -164,3 +171,7 @@ fn publish_candidates(pc: &Arc<RTCPeerConnection>, sender: SignalSender) {
 }
 
 pub const ROLE: Role = Role::Offerer;
+
+/// How often the session loop turns with nothing to read, to tick the runner's
+/// stall clock. A fraction of the runner's default 120 s stall window.
+pub const TICK_EVERY: Duration = Duration::from_secs(10);

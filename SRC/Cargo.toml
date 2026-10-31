@@ -23,3 +23,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [[bin]]
 name = "soundcard-to-webrtc"
 path = "src/main.rs"
+
+[dev-dependencies]
+# Paused time, so the backoff test proves the wait without taking it.
+tokio = { version = "1.36", features = ["full", "test-util"] }
