@@ -4,5 +4,5 @@ on: [push, pull_request]
 # a change on the SDK main branch must not change this gate without a commit here.
 jobs:
   ci:
-    uses: LikeDotAudio/APK.plugin.SDK/.github/workflows/plugin-ci.yml@sdk-v0.6
+    uses: LikeDotAudio/APK.plugin.SDK/.github/workflows/plugin-ci.yml@sdk-v0.7
     secrets: inherit
