@@ -34,7 +34,7 @@ rules live in the root: [Doctrine](../../../../../../Documentation/%F0%9F%8F%9BP
   are separate connections, but one constructor: each takes its options from
   `apk_plugin_runner::session::Session`, so client id, credentials and keep-alive are decided once.
 * **The image builds the workspace `[patch]`, not the tag.** `SRC/Cargo.toml` names the SDK by
-  `sdk-v0.5` so the repository builds alone; inside the monorepo DISCOVERY.Engine's `[patch]` and
+  `sdk-v0.7` so the repository builds alone; inside the monorepo DISCOVERY.Engine's `[patch]` and
   `members/` link build the local runner and contracts (`.apk.scripts/plugin_standalone.py`
   docstring). That is the house pattern for every plugin, not a gap in this one.
 * **No Dockerfile; compose `extends` `plugin-base.yml`.** One plugin image and one base service per
