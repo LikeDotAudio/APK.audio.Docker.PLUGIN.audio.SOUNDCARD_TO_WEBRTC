@@ -182,7 +182,7 @@ async fn call(settings: settings::Settings, broker: String, broker_port: u16) ->
         }
     });
 
-    let signalling = signal::connect(&broker, broker_port, &settings.room, session::ROLE).await?;
+    let signalling = signal::connect(TOKEN, &broker, broker_port, &settings.room, session::ROLE).await?;
     let (pc, track) = session::build(&settings.stun).await?;
     session::run(pc, track, packet_rx, signalling).await
 }

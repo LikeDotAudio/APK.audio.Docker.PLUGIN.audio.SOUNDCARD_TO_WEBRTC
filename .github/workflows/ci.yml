@@ -1,6 +1,8 @@
 name: ci
 on: [push, pull_request]
+# Pinned to the SDK release this crate names in Cargo.toml (audit 2026-10-30):
+# a change on the SDK main branch must not change this gate without a commit here.
 jobs:
   ci:
-    uses: LikeDotAudio/APK.plugin.SDK/.github/workflows/plugin-ci.yml@main
+    uses: LikeDotAudio/APK.plugin.SDK/.github/workflows/plugin-ci.yml@sdk-v0.5
     secrets: inherit

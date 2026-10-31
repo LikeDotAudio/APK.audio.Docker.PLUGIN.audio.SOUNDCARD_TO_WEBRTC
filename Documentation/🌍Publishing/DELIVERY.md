@@ -28,6 +28,21 @@ every other submodule by `.apk.scripts/deploy_all.py` at the APK.audio root.
 ## Not automated
 
 * CI ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) runs the SDK's reusable plugin
-  workflow; no test exercises a real card or a real call.
+  workflow pinned at `@sdk-v0.5`; no test exercises a real card. The offer/answer contract runs in
+  process (SOUNDCARD_OUT `tests/offer_answer.rs`), not over a broker.
 * No release artefact or version: the image is built locally on each node (`up -d --build`).
 * The STUN server defaults to a public Google one (`--stun`); nothing provisions a local one.
+
+## Delivered from the 2026-10-30 audit
+
+Part of the plugin image (`apk-plugins:local`, DISCOVERY.Engine) as `Plugin-SOUNDCARD_IN`; the code
+reaches a running container on the next `up-stack.sh` of the plugins (needs owner).
+
+- **One shared WebRTC link** — `SRC/src/signal.rs`, `card_state.rs` and `settings.rs` are the only copy; PLUGIN.SOUNDCARD_OUT deletes its three and `pub use`s them from this crate by git rev (sibling convention of `plugin_standalone.py`). Verified: `cargo test -p apkaudio-soundcard-to-webrtc` (23 passed) and SOUNDCARD_OUT's tests against it. The engine `[patch]` line for this repository's URL is a handoff to DISCOVERY.Engine; the pinned rev must be pushed before a standalone SOUNDCARD_OUT build fetches it (needs owner).
+- **Offer/answer contract test** — `signal::loopback()` joins an offerer and an answerer in process through the versioned wire form; SOUNDCARD_OUT's `tests/offer_answer.rs` runs this crate's offerer against its answerer through hello → offer → answer → ice. Unit test `the_loopback_pair_faces_itself` here.
+- **Versioned signalling** — `{"v":1,"type":…}`; `encode`/`decode`, `SIGNAL_VERSION`; missing `v` = 1, newer refused (tests `the_wire_form_is_the_published_one`, `versions_are_read_honestly`); documented in ARCHITECTURE.md as the WebRTC signalling Published Language.
+- **CI pinned** — `.github/workflows/ci.yml` uses `plugin-ci.yml@sdk-v0.5`. Standalone CI of the compose include and `Session` needs the next SDK tag (publishing tags: needs owner).
+- **One session constructor** — card state and signalling take their options from `apk_plugin_runner::session::Session` (unique client ids, credentials); the signalling resubscribes on every ConnAck. Kept by design: separate connections (the runner's sync client owns the will; these are tokio) — PRINCIPLES.md.
+- **Shared volumes included** — `Docker/docker-compose.yml` includes `DISCOVERY.Engine/Docker/plugin-volumes.yml` instead of a copied block; `docker compose config` byte-identical before and after.
+- **Image builds the patched workspace** — Kept by design: the engine `[patch]` + `members/` link is the house pattern (PRINCIPLES.md).
+- **Compose `extends` plugin-base.yml** — Kept by design: one plugin image and base service per node (PRINCIPLES.md).

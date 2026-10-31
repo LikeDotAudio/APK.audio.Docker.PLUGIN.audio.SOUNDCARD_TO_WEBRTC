@@ -13,6 +13,13 @@ name: apk-audio
 # DockTor's K8/plugin-includes.sh fails when it does not (PLAN-3395.01).
 x-apk-plugin: true
 
+# THE TWO SHARED VOLUMES (apk-audio-logs, mac-lookup-cache) are declared once,
+# in DISCOVERY.Engine/Docker/plugin-volumes.yml, and included here (audit
+# 2026-10-30, W02) — not copied: compose hashes a volume's declaration, and a
+# copy that drifted from the owner's made a lone `up` ask to recreate the bind.
+include:
+  - path: "../../../DISCOVERY.Engine/Docker/plugin-volumes.yml"
+
 services:
   soundcard-in:
     extends:
@@ -42,23 +49,3 @@ services:
     # THE BASE HEALTHCHECK STANDS (LOOSE-soundcard-healthcheck): the binary is
     # on apk-plugin-runner (PLAN-3402.01), whose telemetry tick writes the file
     # `apk-plugin-health` reads — also while the card is idle and retrying.
-
-volumes:
-  # LOGGER STORAGE — owned by DATABASE.volume.Log-STORAGE, which binds it onto
-  # Documentation/LOGS and is up first in the pod. NOT `external:` (PLAN-3399.01),
-  # so this file's own `up` also works on a clean host. DECLARED IDENTICAL TO
-  # THE OWNER'S bind (LOOSE-plugin-osc): compose hashes a volume's declaration,
-  # and a plain block here hashed differently from logger-storage's, so a lone
-  # `up` asked "Recreate (data will be lost)?" — yes (or -y) replaced the bind.
-  # Same hash: no prompt, and a clean-host `up` makes the right bind, not a
-  # plain volume. APKAUDIO_REPO is exported by up-stack.sh; run by hand, the
-  # commands above start in the checkout root, so $PWD is the same path.
-  apk-audio-logs:
-    name: apk-audio-logs
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "${APKAUDIO_REPO:-${PWD}}/Documentation/LOGS"
-  mac-lookup-cache:
-    name: apk-audio-mac-lookup-cache

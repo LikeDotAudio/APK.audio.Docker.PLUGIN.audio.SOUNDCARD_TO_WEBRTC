@@ -15,11 +15,12 @@
 //! open, and the plugin retries every RETRY so a card plugged in later, or an
 //! APK_SOUNDCARD_DEVICE set and the container restarted, is picked up.
 //!
-//! Twin: PLUGIN.SOUNDCARD_OUT/SRC/src/card_state.rs — keep the two identical.
+//! Shared: PLUGIN.SOUNDCARD_OUT takes this module from this crate (see `signal`).
 use anyhow::Result;
 use apkaudio_contracts::agent_state::AgentState;
 use apkaudio_contracts::baremetal_io;
-use rumqttc::{AsyncClient, MqttOptions, QoS};
+use apk_plugin_runner::session::Session;
+use rumqttc::{AsyncClient, QoS};
 use std::time::Duration;
 
 /// How long an idle plugin waits before trying the card again.
@@ -36,15 +37,10 @@ impl CardState {
     pub async fn connect(token: &str, broker: &str, port: u16) -> Result<Self> {
         let (state_topic, _) = baremetal_io::module_incoming(token, "state")?;
         let (detail_topic, _) = baremetal_io::module_incoming(token, "detail")?;
-        // `-card` ON THE CLIENT ID. apk-plugin-runner's own session is
-        // `apk-plugin-{token}-{pid}` in this same process (PLAN-3402.01), and
-        // MQTT drops the older session on a duplicate id — the two would kick
-        // each other off for ever, reconnecting every few seconds.
-        let mut options = MqttOptions::new(format!("apk-plugin-{token}-card-{}", std::process::id()), broker, port);
-        options.set_keep_alive(Duration::from_secs(20));
-        if let Some((username, password)) = apkaudio_contracts::broker_auth::credentials() {
-            options.set_credentials(username, password);
-        }
+        // ITS OWN CLIENT ID, from the runner's `Session` (role `card`): MQTT
+        // drops the older of two sessions with one id, so this and the
+        // runner's session in the same process must never share one.
+        let options = Session::new(token, "card").to(broker, port).options();
         // NO LAST WILL HERE. apk-plugin-runner's own session already wills
         // `unavailable` on this exact leaf (RP-01: the runner owns the will);
         // a second will on a second session was two owners of one fact.

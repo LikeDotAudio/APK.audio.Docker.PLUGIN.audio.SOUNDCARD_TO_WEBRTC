@@ -45,7 +45,7 @@ the values the process actually runs with written in.
 
 | Topic | Kept? | What |
 |---|---|---|
-| `APK.audio/Audio/WebRTC/{room}/offerer` | no | this side's offer and ICE candidates (`{"type": "offer"}` / `"ice"`) |
+| `APK.audio/Audio/WebRTC/{room}/offerer` | no | this side's offer and ICE candidates (`{"v": 1, "type": "offer"}` / `"ice"` — the wire form is tabled in ARCHITECTURE.md) |
 | `APK.audio/Audio/WebRTC/{room}/answerer` | no | subscribed: the peer's `hello`, answer and candidates |
 | `APK.audio/System/Protocols/soundcard_in/incoming/state` | retained | `listening` once capturing, `unavailable` while no card opens — the runner's last will says `unavailable` on the same leaf |
 | `APK.audio/System/Protocols/soundcard_in/incoming/detail` | retained | why: the device opened, or the error and the devices that would open |
@@ -98,7 +98,7 @@ Docker restarts the container.
 - **Opus off the async runtime.** Encoding runs on its own thread
   (`SRC/src/encode.rs`, `SRC/src/main.rs`).
 
-Twin: `PLUGIN.SOUNDCARD_OUT` — `card_state.rs` is kept identical in both.
+Shared: `signal`, `card_state` and `settings` are written once, in this crate; `PLUGIN.SOUNDCARD_OUT` re-exports them.
 
 ## Plans
 
