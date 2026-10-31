@@ -29,6 +29,10 @@ services:
     # WHAT THIS IS, said by the container itself (PLAN-3409.01): DockTor reads
     # these with docker inspect, so its purpose and endpoint panes keep no list.
     labels:
+      # HOW THE DISCOVERY ENGINE RAISES IT (ROAD-3437 step 3A): its launch table
+      # is these two labels, equal to config.ini [soundcard_in] raise/serves (check.sh raise-labels).
+      audio.apk.raise: "compose"
+      audio.apk.serves: "soundcard_in"
       audio.apk.purpose: "Sound card capture offered over WebRTC"
       audio.apk.purpose.what: "soundcard-to-webrtc on host networking with /dev/snd, capturing the ALSA default input and offering it as WebRTC in room APK_SOUNDCARD_ROOM, signalled over the broker. It exits if the default card has no capture device."
       audio.apk.purpose.why: "It lets a browser tab listen to a physical input on this machine. Host networking because WebRTC ICE needs the host's real addresses."
