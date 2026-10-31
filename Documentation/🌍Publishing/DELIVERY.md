@@ -28,7 +28,7 @@ every other submodule by `.apk.scripts/deploy_all.py` at the APK.audio root.
 ## Not automated
 
 * CI ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) runs the SDK's reusable plugin
-  workflow pinned at `@sdk-v0.7`; no test exercises a real card. The offer/answer contract runs in
+  workflow pinned at `@sdk-v0.9`; no test exercises a real card. The offer/answer contract runs in
   process (SOUNDCARD_OUT `tests/offer_answer.rs`), not over a broker.
 * No release artefact or version: the image is built locally on each node (`up -d --build`).
 * The STUN server defaults to a public Google one (`--stun`); nothing provisions a local one.
@@ -48,3 +48,4 @@ reaches a running container on the next `up-stack.sh` of the plugins (needs owne
 - **Image builds the patched workspace** — Kept by design: the engine `[patch]` + `members/` link is the house pattern (PRINCIPLES.md).
 - **Compose `extends` plugin-base.yml** — Kept by design: one plugin image and base service per node (PRINCIPLES.md).
 - **SDK tag `sdk-v0.7`** (0388231 → bbde443) — `SRC/Cargo.toml` (runner and contracts) and `.github/workflows/ci.yml` (`plugin-ci.yml@sdk-v0.7`). v0.7 carries the runner's `session`, `unkept` and `docker/plugin-volumes.yml`, so the standalone build the items above waited on now works. Verified 2026-10-31: `git archive HEAD`, extracted alone, `cd SRC && cargo test` 23 passed. SOUNDCARD_IN is pushed (remote HEAD bbde443); PLUGIN.SOUNDCARD_OUT still pins this repository at `c98eba6`, which builds on `sdk-v0.5`, so its standalone build fails until it takes bbde443.
+- **SDK tag `sdk-v0.9`, crate 0.2.0** (PLAN-3432.01) — `SRC/Cargo.toml` (runner and contracts) and `.github/workflows/ci.yml` (`plugin-ci.yml@sdk-v0.9`); `apkaudio-soundcard-to-webrtc` 0.1.0 → 0.2.0 (its offer/answer types now carry the `sdk-v0.9` contracts). PLUGIN.SOUNDCARD_OUT pins this commit by full `rev`. Verified 2026-10-31: the tree alone (`git archive`, no `.cargo` patch), `cd SRC && cargo test` against GitHub — 23 passed; the lock holds one `apkaudio-contracts`.

@@ -1,12 +1,12 @@
 [package]
 name = "apkaudio-soundcard-to-webrtc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Captures a system sound card and sends it as Opus over WebRTC"
 
 [dependencies]
-apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.7" }
-apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.7" }
+apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.9" }
+apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.9" }
 cpal = "0.15"
 audiopus = "0.2"
 webrtc = "0.17"
