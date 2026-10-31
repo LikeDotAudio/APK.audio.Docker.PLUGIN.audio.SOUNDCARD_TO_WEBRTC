@@ -125,6 +125,14 @@ pub async fn run(
                 tracing::info!("a new receiver asked while a call was up; ending this call so it can be offered afresh");
                 break;
             }
+            // A SECOND ANSWER TO ONE OFFER. The answerer's `hello` and this
+            // side's first offer can cross, so the offer is said twice and a
+            // well-behaved answerer may answer both; the connection is already
+            // negotiated, and applying another answer in `stable` would fail
+            // and end a good call (found by SOUNDCARD_OUT's tests/offer_answer.rs).
+            Signal::Answer { .. } if answered => {
+                tracing::debug!("a second answer to the same offer, ignored: the call is already negotiated");
+            }
             Signal::Answer { sdp } => {
                 let answer = RTCSessionDescription::answer(sdp)?;
                 pc.set_remote_description(answer).await?;
