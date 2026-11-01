@@ -1,6 +1,6 @@
 [package]
 name = "apkaudio-soundcard-to-webrtc"
-version = "0.2.0"
+version = "2.0.0"
 edition = "2024"
 description = "Captures a system sound card and sends it as Opus over WebRTC"
 
