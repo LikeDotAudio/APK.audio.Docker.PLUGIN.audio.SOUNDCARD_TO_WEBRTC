@@ -73,6 +73,10 @@ pub fn start(device: &cpal::Device) -> Result<Capture> {
 
 /// Conform one callback's worth of audio and emit every whole frame in it.
 fn drain(data: &[i16], rate: u32, channels: usize, pending: &mut Vec<i16>, tx: &SyncSender<Vec<i16>>) {
+    // TRAFFIC, counted for the loopback telemetry (ROAD-3478): one buffer the
+    // card delivered. One relaxed atomic add — safe in the audio callback,
+    // which must not block or allocate for it.
+    apk_plugin_runner::loopback::packet_received();
     pending.extend_from_slice(&format::conform(data, rate, channels));
     while pending.len() >= FRAME_INTERLEAVED {
         let frame: Vec<i16> = pending.drain(..FRAME_INTERLEAVED).collect();

@@ -111,6 +111,18 @@ mod tests {
     use super::*;
 
     const INI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/config.ini"));
+
+    /// The manifest the binary compiles in parses, declares the loopback port
+    /// and lists every key of config.ini's [soundcard_in] as read (ROAD-3478).
+    #[test]
+    fn the_compiled_in_manifest_parses_and_reads_every_config_key() {
+        let manifest = apkaudio_contracts::embedded_manifest!().expect("agent.toml parses");
+        assert_eq!(manifest.name, "soundcard_in");
+        assert_eq!(manifest.telemetry_port, 8216);
+        let config = apk_plugin_runner::ini_to_json(INI);
+        let keys: Vec<&str> = config["soundcard_in"].as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(manifest.unread_config_keys(keys), Some(0), "a [soundcard_in] key nothing reads");
+    }
     const TOKEN: &str = "soundcard_in";
 
     #[test]

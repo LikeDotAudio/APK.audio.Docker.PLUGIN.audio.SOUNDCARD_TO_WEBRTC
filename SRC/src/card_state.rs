@@ -63,8 +63,13 @@ impl CardState {
 
     /// Say `state` and why, retained (both leaves are conclusions — baremetal_io).
     pub async fn say(&self, state: AgentState, detail: &str) {
-        let _ = self.client.publish(&self.detail_topic, QoS::AtLeastOnce, true, detail.to_owned()).await;
-        let _ = self.client.publish(&self.state_topic, QoS::AtLeastOnce, true, state.as_str()).await;
+        // Counted (ROAD-3478): a refused publish is a publish_failure, not silence.
+        apk_plugin_runner::loopback::published(
+            self.client.publish(&self.detail_topic, QoS::AtLeastOnce, true, detail.to_owned()).await.is_ok(),
+        );
+        apk_plugin_runner::loopback::published(
+            self.client.publish(&self.state_topic, QoS::AtLeastOnce, true, state.as_str()).await.is_ok(),
+        );
     }
 }
 

@@ -107,6 +107,9 @@ fn main() {
 
     // This crate's own name and version into `incoming/api` (PLAN-3407.01).
     apk_plugin_runner::stamp!();
+    // The compiled-in agent.toml (ROAD-3478): loopback telemetry on
+    // 127.0.0.1:8216 — `running` until the card delivers audio, `serving` after.
+    apk_plugin_runner::__declare_manifest!("agent.toml");
     apk_plugin_runner::serve(
         apk_plugin_runner::Plugin {
             token: TOKEN,
@@ -122,11 +125,13 @@ fn main() {
                     Ok(runtime) => runtime,
                     Err(e) => {
                         eprintln!("🛑 [{TOKEN}] no tokio runtime: {e}");
+                        apk_plugin_runner::loopback::fatal(format!("no tokio runtime: {e}"));
                         return;
                     }
                 };
                 if let Err(e) = runtime.block_on(call(settings, host, port)) {
                     eprintln!("🛑 [{TOKEN}] {e:#}");
+                    apk_plugin_runner::loopback::fatal(format!("{e:#}"));
                 }
             }) as Box<dyn FnOnce(String, u16) + Send>,
         )],

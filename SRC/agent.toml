@@ -1,0 +1,31 @@
+# Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
+# MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
+#
+# WHAT THIS AGENT IS, compiled into soundcard-to-webrtc by
+# `apk_plugin_runner::__declare_manifest!("agent.toml")` in src/main.rs
+# (apkaudio_contracts::embedded_manifest!, ROAD-3472 / ROAD-3478). Not read at
+# run time: the image carries the binary, not this file.
+
+[agent]
+name = "soundcard_in"
+kind = "service"
+title = "Sound card → WebRTC (Opus) sender"
+status = "live"
+summary = "Captures one host sound card, conforms it to 48 kHz stereo, encodes Opus and offers it to one WebRTC peer, with SDP and ICE carried over MQTT. Capture only."
+
+[telemetry]
+# GET /status and GET /telemetry on 127.0.0.1:8216 (host networking,
+# so this is the node's loopback and NODE.BareMetal's supervisor reads it).
+# The input is the host itself: a PACKET is one buffer of audio the card
+# delivered to the cpal input callback (src/capture.rs::drain). `running`
+# while no card is open (or an open card delivers nothing), `serving` once
+# audio is arriving — whether or not a peer has answered the offer yet.
+# APK_TELEMETRY_PORT moves it; 0 turns it off.
+port = 8216
+
+[config]
+# Every key of config.ini's [soundcard_in] that code reads: raise by
+# apk-plugin-runner (module_raise); room, stun and device by
+# src/settings.rs::resolve (defaults under argv / APK_SOUNDCARD_DEVICE). A key
+# added there and not here is counted in `unread_config_keys`.
+reads = ["raise", "room", "stun", "device"]
