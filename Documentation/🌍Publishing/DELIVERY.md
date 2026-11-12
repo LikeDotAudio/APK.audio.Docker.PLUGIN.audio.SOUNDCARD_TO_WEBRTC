@@ -50,5 +50,12 @@ reaches a running container on the next `up-stack.sh` of the plugins (needs owne
 - **SDK tag `sdk-v0.7`** (0388231 → bbde443) — `SRC/Cargo.toml` (runner and contracts) and `.github/workflows/ci.yml` (`plugin-ci.yml@sdk-v0.7`). v0.7 carries the runner's `session`, `unkept` and `docker/plugin-volumes.yml`, so the standalone build the items above waited on now works. Verified 2026-10-31: `git archive HEAD`, extracted alone, `cd SRC && cargo test` 23 passed. SOUNDCARD_IN is pushed (remote HEAD bbde443); PLUGIN.SOUNDCARD_OUT still pins this repository at `c98eba6`, which builds on `sdk-v0.5`, so its standalone build fails until it takes bbde443.
 - **SDK tag `sdk-v0.9`, crate 0.2.0** (PLAN-3432.01) — `SRC/Cargo.toml` (runner and contracts) and `.github/workflows/ci.yml` (`plugin-ci.yml@sdk-v0.9`); `apkaudio-soundcard-to-webrtc` 0.1.0 → 0.2.0 (its offer/answer types now carry the `sdk-v0.9` contracts). PLUGIN.SOUNDCARD_OUT pins this commit by full `rev`. Verified 2026-10-31: the tree alone (`git archive`, no `.cargo` patch), `cd SRC && cargo test` against GitHub — 23 passed; the lock holds one `apkaudio-contracts`.
 
+## Delivered 2026-11-11 – 2026-11-12
+
+From this repository's own commits (the commit message is the record):
+
+- pin sdk-v2.4 (ROAD-3731: contracts 2.4.0 published) (`aa9996b`)
+- ROAD-3731: error/warn prints go through apk_plugin_runner::elog! (5 lines) so they reach System/Log/<token>/<level> (`9cb73c5`)
+
 ## Releases
 - **Released `2.0.0`, tag `v2.0.0`** (2026-11-01, ROAD-3452, the owner's V2) — on `sdk-v2.0` (contracts 2.0.0); every manifest says 2.0.0; GitHub release `v2.0.0`.
