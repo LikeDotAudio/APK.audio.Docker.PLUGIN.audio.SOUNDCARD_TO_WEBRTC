@@ -63,7 +63,7 @@ fn main() {
                 }
             }
             Err(e) => {
-                eprintln!("🛑 {e:#}");
+                apk_plugin_runner::elog!(error, "🛑 {e:#}");
                 std::process::exit(1);
             }
         }
@@ -76,7 +76,7 @@ fn main() {
     // not connect with nothing logged anywhere.
     let ini = match std::env::var("APK_PLUGIN_CONFIG").ok().filter(|p| !p.trim().is_empty()) {
         Some(path) => std::fs::read_to_string(&path).unwrap_or_else(|e| {
-            eprintln!("🛑 [{TOKEN}] APK_PLUGIN_CONFIG={path} did not read ({e}); using the compiled-in config.ini");
+            apk_plugin_runner::elog!(error, "🛑 [{TOKEN}] APK_PLUGIN_CONFIG={path} did not read ({e}); using the compiled-in config.ini");
             CONFIG_INI.to_owned()
         }),
         None => CONFIG_INI.to_owned(),
@@ -91,7 +91,7 @@ fn main() {
         device_env.as_deref(),
     );
     if let Err(e) = signal::check_room(&settings.room, session::ROLE) {
-        eprintln!("🛑 {e:#}");
+        apk_plugin_runner::elog!(error, "🛑 {e:#}");
         std::process::exit(2);
     }
 
@@ -124,13 +124,13 @@ fn main() {
                 let runtime = match tokio::runtime::Runtime::new() {
                     Ok(runtime) => runtime,
                     Err(e) => {
-                        eprintln!("🛑 [{TOKEN}] no tokio runtime: {e}");
+                        apk_plugin_runner::elog!(error, "🛑 [{TOKEN}] no tokio runtime: {e}");
                         apk_plugin_runner::loopback::fatal(format!("no tokio runtime: {e}"));
                         return;
                     }
                 };
                 if let Err(e) = runtime.block_on(call(settings, host, port)) {
-                    eprintln!("🛑 [{TOKEN}] {e:#}");
+                    apk_plugin_runner::elog!(error, "🛑 [{TOKEN}] {e:#}");
                     apk_plugin_runner::loopback::fatal(format!("{e:#}"));
                 }
             }) as Box<dyn FnOnce(String, u16) + Send>,
